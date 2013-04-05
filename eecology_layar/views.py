@@ -49,7 +49,7 @@ def upload_screenshot(request):
     p = request.POST
     logger.info(p)
     input_file = p['screenshot'].file
-    filename = "{}-{}.jpg".format(p['lat'], p['lon'])
+    filename = "{0}-{1}.jpg".format(p['lat'], p['lon'])
     file_path = os.path.join('/tmp', filename)
     logger.warn("Storing screenshot at " + file_path + " with message: "+ p['message'])
     with open(file_path, 'wb') as output_file:
@@ -113,21 +113,23 @@ def get_hotspots(request):
     """
     device_info_serial = 355
     p = request.params
-    mine = WKTSpatialElement("POINT({} {})".format(p['lat'], p['lon']))
+    mine = WKTSpatialElement("POINT({0} {1})".format(p['lon'], p['lat']))
     distc = functions.distance(Track.location, mine)
-    within = functions.within_distance(Track.location, mine, p['radius'])
+    within = Track.location.within_distance(mine, p['radius'])
     query = DBSession().query(Track, Individual)
     query = query.join(Device).join(TrackSession).join(Individual)
-    query = query.filter(within).filter(Track.device_info_serial==device_info_serial)
+    query = query.filter(Track.device_info_serial==device_info_serial)
+    query = query.filter(within)
+    query = query.filter(Track.date_time.between('2010-06-28T00:12:47Z','2010-06-28T17:43:09Z'))
     query = query.order_by(distc)  # Closest spot first
 
     logger.info(query)
 
     spots = []
     # TODO implement paging, for now select hotspots in Amsterdam
-    limit = 30
+    limit = 50
     for row, indi in query[:limit]:
-        name = "{} {} {}".format(indi.sex, indi.species, indi.color_ring)
+        name = "{0} {1} {2}".format(indi.sex, indi.species, indi.color_ring)
         spot = {
            "id": str(row.device_info_serial) + " " + str(row.date_time),
            "anchor": {"geolocation": {"lat": row.latitude,
@@ -139,7 +141,21 @@ def get_hotspots(request):
              "footnote": "http://www.uva-bits.nl",
            },
 #            "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
+           "imageURL": "http://www.uva-bits.nl/wp-content/uploads/2011/01/N2_seagull-50x50.jpg",
            "biwStyle": "collapsed",
+#           "object": {
+#                      "contentType": "model/vnd.layar.l3d",
+#                       "url": "http://testvm1.uva-bits.nl/layar/static/bird.l3d",
+#                      "url": request.static_url('eecology_layar:static/bird.l3d'),
+#                      "size": 10,
+#                      },
+           "transform": {
+#                         "rotate": {
+#                                    "axis": {"z": 1},
+#                                    "angle": row.direction,
+#                                    },
+#                         "scale": 40, 
+                         },
            "actions": [{
                         "label": "Share",
                         "uri": "layarshare://sharingapi/?title=Describe%20title&type=message&description=Describe%20location",
@@ -166,7 +182,10 @@ def get_hotspots(request):
         if 'alt' in p:
             """Only show alt when gps fix"""
             alt = row.altitude - float(p['alt'])
-            spot['transform'] = {'translate':{'z': alt}}
+            spot['transform']['translate'] = {'z': alt}
+
+
         spots.append(spot)
 
     return spots
+
