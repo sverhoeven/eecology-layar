@@ -113,22 +113,28 @@ def get_hotspots(request):
     """
     device_info_serial = 355
     p = request.params
-    mine = WKTSpatialElement("POINT({0} {1})".format(p['lon'], p['lat']))
-    distc = functions.distance(Track.location, mine)
-    within = Track.location.within_distance(mine, p['radius'])
+    point = "POINT({0} {1})".format(p['lon'], p['lat'])
+    mine = WKTSpatialElement(point)
+    spheroid = 'SPHEROID["WGS 84",6378137,298.257223563]'
+    #distc = functions.distance(Track.location, mine)
+    distc = 'ST_Distance_Spheroid(location, ST_GeomFromText(:mine, 4326), :spheroid)'
+    within = distc + ' < :radius'
     query = DBSession().query(Track, Individual)
     query = query.join(Device).join(TrackSession).join(Individual)
+    query = query.filter(within).params(mine=point, spheroid=spheroid, radius=p['radius'])
     query = query.filter(Track.device_info_serial==device_info_serial)
-    query = query.filter(within)
     query = query.filter(Track.date_time.between('2010-06-28T00:12:47Z','2010-06-28T17:43:09Z'))
     query = query.order_by(distc)  # Closest spot first
-
+    
     logger.info(query)
 
     spots = []
     # TODO implement paging, for now select hotspots in Amsterdam
-    limit = 50
-    for row, indi in query[:limit]:
+    limit = 134 # for some reason limit must be x3 to get correct row count
+    query = query.slice(0, limit)
+    rows = query.all();
+    logger.info(len(rows))
+    for row, indi in rows:
         name = "{0} {1} {2}".format(indi.sex, indi.species, indi.color_ring)
         spot = {
            "id": str(row.device_info_serial) + " " + str(row.date_time),
@@ -145,16 +151,17 @@ def get_hotspots(request):
            "biwStyle": "collapsed",
 #           "object": {
 #                      "contentType": "model/vnd.layar.l3d",
+#                      "url": "http://testvm1.uva-bits.nl/layar/static/cheers.l3d",
 #                       "url": "http://testvm1.uva-bits.nl/layar/static/bird.l3d",
 #                      "url": request.static_url('eecology_layar:static/bird.l3d'),
-#                      "size": 10,
+#                      "size": 2,
 #                      },
            "transform": {
 #                         "rotate": {
 #                                    "axis": {"z": 1},
 #                                    "angle": row.direction,
 #                                    },
-#                         "scale": 40, 
+#                         "scale": 100, 
                          },
            "actions": [{
                         "label": "Share",
