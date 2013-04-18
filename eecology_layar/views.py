@@ -130,7 +130,7 @@ def get_hotspots(request):
 
     spots = []
     # TODO implement paging, for now select hotspots in Amsterdam
-    limit = 134 # for some reason limit must be x3 to get correct row count
+    limit = 50 # for some reason limit must be x3 to get correct row count
     query = query.slice(0, limit)
     rows = query.all();
     logger.info(len(rows))

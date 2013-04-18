@@ -12,36 +12,26 @@ Base = declarative_base()
 
 GPS_SCHEMA = 'gps'
 
-class Project(Base):
-    __tablename__ = 'ee_project_limited'
-    __table_args__ = {'schema': GPS_SCHEMA}
-
-    key_name = Column(String, primary_key=True)
-    common_name = Column(String)
-    devices = relationship("Device", backref=backref('project'))
-    individuals = relationship("Individual", backref=backref('project'))
-
 
 class Individual(Base):
-    __tablename__ = 'ee_individual_limited'
+    __tablename__ = 'uva_individual'
     __table_args__ = {'schema': GPS_SCHEMA}
     ring_number = Column(String, primary_key=True)
     color_ring = Column(String)
     species = Column(String)
     sex = Column(String)
-    project_key_name = Column(String, ForeignKey(Project.key_name))
 
 
 class Device(Base):
-    __tablename__ = 'ee_device_limited'
+    __tablename__ = 'uva_device'
     __table_args__ = {'schema': GPS_SCHEMA}
 
     device_info_serial = Column(Integer, primary_key=True)
-    project_key_name = Column(String, ForeignKey(Project.key_name))
+    #project_key_name = Column(String, ForeignKey(Project.key_name))
 
 
 class TrackSession(Base):
-    __tablename__ = 'ee_track_session_limited'
+    __tablename__ = 'uva_track_session'
     __table_args__ = {'schema': GPS_SCHEMA}
 
     device_info_serial = Column(Integer,
@@ -55,7 +45,7 @@ class TrackSession(Base):
 
 
 class Track(Base):
-    __tablename__ = 'ee_tracking_speed_limited'
+    __tablename__ = 'uva_tracking_speed'
     __table_args__ = {'schema': GPS_SCHEMA}
     device_info_serial = Column(Integer, ForeignKey(Device.device_info_serial), primary_key=True)
     date_time = Column(DateTime, primary_key=True)
