@@ -9,6 +9,8 @@ from pyramid.paster import (
     setup_logging,
     )
 
+from geoalchemy import WKTSpatialElement
+
 from eecology_layar.models import (
     DBSession,
     Track,
@@ -29,24 +31,29 @@ color2class = {
 def importkml(node):
     model = Track()
     coord = node[6][3].text.strip().split(',')
-    model.lat = float(coord[0])
-    model.long = float(coord[1])
-    model.alt = float(coord[2])
+    # uncomment offsets to bring bird to den bosch
+    model.longitude = float(coord[0])  # + 0.379028
+    model.latitude = float(coord[1])  # - 0.696336
+    model.altitude = float(coord[2])
 
     hex_color = node[4][0].text  # abgr
     model.classifier = color2class[hex_color]
 
     table = etree.fromstring(node[3].text)
-    model.tid = table[2][1].text
-    model.utm_time = table[1][1].text
+    model.device_info_serial = table[2][1].text
+    model.date_time = table[1][1].text
     speeds = table[5][1].text.split()
     model.speed = speeds[0]
     model.speed3d = speeds[1]
 
-    model.id = "{} {}".format(model.tid, model.utm_time)
-
-    # TODO make name dynamic
+    # TODO make name dynamic using Individual table
     model.name = "female gull FAKV"
+
+    # TODO enable when using PostGIS
+#     point = "POINT({0} {1} {2})".format(model.latitude,
+#                                        model.longitude,
+#                                        model.altitude)
+#     model.location = WKTSpatialElement(point)
 
     DBSession.add(model)
 
@@ -72,6 +79,7 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
+
     Base.metadata.create_all(engine)
 
     print "Create db\n"

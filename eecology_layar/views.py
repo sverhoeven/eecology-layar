@@ -1,5 +1,8 @@
-from pyramid.view import view_config
+import os
+import shutil
 import logging
+from pyramid.view import view_config
+from pyramid.response import Response
 from geoalchemy.functions import functions
 from .models import DBSession, Track
 
@@ -27,6 +30,31 @@ def home(request):
         }
 
     return result
+
+
+@view_config(route_name='screenshot')
+def upload_screenshot(request):
+    """
+
+    POST params:
+    screenshot: the image
+    layer_name: the name of the layer
+    message: a message from the user
+    lat: latitude of the user
+    lon: longitude of the user
+    location_name: friendly location name
+    """
+
+    p = request.POST
+    logger.info(p)
+    input_file = p['screenshot'].file
+    filename = "{}-{}.jpg".format(p['lat'], p['lon'])
+    file_path = os.path.join('/tmp', filename)
+    logger.warn("Storing screenshot at " + file_path + " with message: "+ p['message'])
+    with open(file_path, 'wb') as output_file:
+        shutil.copyfileobj(input_file, output_file)
+
+    return Response("OK")
 
 
 def get_hotspots(request):
@@ -88,29 +116,6 @@ NULL
 
     """
 
-    tracker_id = 355
-    rows = [{
-             "utm_time": "28-Jun-2010 09:11:33",
-             "lat": 4.8859,
-             "long": 52.3727,
-             "alt": 163,
-             "temperature": 24,
-             "sensor_time": 179.38302,
-             "tspeed": 19.1809,
-             "pspeed": 40.8701,
-             "class": "soar",
-             }, {
-             "utm_time": "28-Jun-2010 09:11:33",
-             "lat": 4.8859,
-             "long": 52.3727,
-             "alt": 163,
-             "temperature": 24,
-             "sensor_time": 179.38302,
-             "tspeed": 19.1809,
-             "pspeed": 40.8701,
-             "class": "soar",
-             }]
-
     """
       // Use PDO::prepare() to prepare SQL statement.
   // This statement is used due to security reasons and will help prevent general SQL injection attacks.
@@ -154,21 +159,43 @@ NULL
     rows = DBSession().query(Track)
 
     spots = []
-    max_hotspots = 200
-    for row in rows[:max_hotspots]:
+    # TODO implement paging, for now select hotspots in Amsterdam
+    for row in rows.slice(90, 140):
         spot = {
-           "id": row.id,
-           "anchor": {"geolocation": {"lat": row.lat,
-                                      "lon": row.long,
-                                      "alt": row.alt,
+           "id": str(row.device_info_serial) + " " + row.date_time,
+           "anchor": {"geolocation": {"lat": row.latitude,
+                                      "lon": row.longitude,
+                                      "alt": int(row.altitude),
                                       }},
            "text": {
-             "title": row.utm_time,
-             "description": "{0}<br/>T: {1} km/h<br/>P: {2} km/h".format(row.name, row.speed, row.speed3d),
-             "footnote": "www.uva-bits.nl",
+             "title": row.date_time,
+             "description": "{0}, T: {1} km/h, P: {2} km/h".format(row.name, row.speed, row.speed3d),
+             "footnote": "http://www.uva-bits.nl",
            },
-           "imageUrl": request.static_url('eecology_layar:static/class/{0}.png'.format(row.classifier)),
+           "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
            "biwStyle": "collapsed",
+           "actions": [{
+                        "label": "Share",
+                        "uri": "layarshare://sharingapi/?title=Describe%20title&type=message&description=Describe%20location",
+                        "contentType": "application/vnd.layar.internal",
+                        "activityType": 13
+                      }, {
+                        "label": "Picture",
+                        "uri": "layarshare://sharingapi/?type=screenshot",
+                        "contentType": "application/vnd.layar.internal",
+                        "params": ["lat", "lon", "alt"],
+                        "activityType": 27
+                      }, {
+                        "label": "Movie",
+                        "uri": "bits://movie",
+                        "params": ["lat", "lon", "alt"],
+                        "activityType": 3
+                      }, {
+                        "label": "Sound",
+                        "uri": "bits://sound",
+                        "params": ["lat", "lon", "alt"],
+                        "activityType": 2
+                      }]
          }
         spots.append(spot)
 
