@@ -1,0 +1,9 @@
+.project
+.pydevproject
+*.kml
+*.kmz
+*.ini
+eecology_layar.egg-info/
+*.sqlite
+env/
+
