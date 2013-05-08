@@ -4,7 +4,8 @@ import logging
 from pyramid.view import view_config
 from pyramid.response import Response
 from geoalchemy.functions import functions
-from .models import DBSession, Track
+from geoalchemy import WKTSpatialElement
+from .models import DBSession, Track, Individual, TrackSession, Device
 
 logger = logging.getLogger()
 
@@ -73,48 +74,7 @@ def get_hotspots(request):
         (u'accuracy', u'100')
     ])
 
-    4.887165,52.372402,1.000000
-<TABLE border="1"><TR><TD><B>Variable</B></TD><TD><B>Value</B></TD></TR>
-<TR><TD>UTM time</TD><TD>28-Jun-2010 09:11:33</TD>
-</TR><TR><TD>sensor ID</TD><TD>355</TD></TR>
-<TR><TD>sensor time</TD><TD>179.38302</TD></TR>
-<TR><TD>record index</TD><TD>161</TD></TR>
-<TR><TD>lat long</TD><TD>4.8859  52.3727</TD></TR>
-<TR><TD>altitude [m]</TD><TD>163</TD></TR>
-<TR><TD>T-P Speed [km/h]</TD><TD>19.1809  40.8701</TD></TR>
-<TR><TD>Dist [km]</TD><TD>NaN</TD></TR>
-<TR><TD>Class</TD><TD>NaN</TD></TR>
-<TR><TD>record index</TD><TD>161</TD></TR></TABLE>
-<color>ff01baf8</color>
-
-SELECT "device_info_serial","date_time","latitude","longitude","altitude","pressure","temperature","h_accuracy","v_accuracy","x_speed","y_speed","z_speed","gps_fixtime","location","userflag","satellites_used","positiondop","speed_accuracy","vnorth","veast","vdown","speed_3d" FROM "gps"."uva_tracking_speed_3d" WHERE "device_info_serial" = '355' and altitude=163
-
-device_info_serial    date_time    latitude    longitude    altitude    pressure    temperature    h_accuracy    v_accuracy    x_speed    y_speed    z_speed    gps_fixtime    location    userflag    satellites_used    positiondop    speed_accuracy    vnorth    veast    vdown    speed_3d
-355
-2010-06-28 09:11:33
-52.3727456
-4.8859403
-163
-NULL
-24
-3.9
-3.6
-9.91
--2.23
--5.07
-9.7
-0101000020E61000006ED51AEF338B13402CDDB820B62F4A40
-0
-7
-1.7
-2.96
--10.7651112008473
--3.06595545974304
--1.89689165538333
-11.3527926079886
-
-
-    """
+     """
 
     """
       // Use PDO::prepare() to prepare SQL statement.
@@ -151,28 +111,34 @@ NULL
   // Use PDO::execute() to execute the prepared statement $sql.
   $sql->execute();
     """
-#    p = request.params
-#    mine = WKTSpatialElement("POINT({} {})".format(p['lat'], p['long']))
-#    dist = functions.distance(Track.geom, mine)
-#    within = functions.distance_within(Track.geom, mine, distance)
-#    rows = DBSession().query(Track, dist).filter(within).order_by(dist)
-    rows = DBSession().query(Track)
+    device_info_serial = 355
+    p = request.params
+    mine = WKTSpatialElement("POINT({} {})".format(p['lat'], p['lon']))
+    distc = functions.distance(Track.location, mine)
+    within = functions.within_distance(Track.location, mine, p['radius'])
+    query = DBSession().query(Track, Individual)
+    query = query.join(Device).join(TrackSession).join(Individual)
+    query = query.filter(within).filter(Track.device_info_serial==device_info_serial)
+    query = query.order_by(distc)  # Closest spot first
+
+    logger.info(query)
 
     spots = []
     # TODO implement paging, for now select hotspots in Amsterdam
-    for row in rows.slice(90, 140):
+    limit = 30
+    for row, indi in query[:limit]:
+        name = "{} {} {}".format(indi.sex, indi.species, indi.color_ring)
         spot = {
-           "id": str(row.device_info_serial) + " " + row.date_time,
+           "id": str(row.device_info_serial) + " " + str(row.date_time),
            "anchor": {"geolocation": {"lat": row.latitude,
                                       "lon": row.longitude,
-                                      "alt": int(row.altitude),
                                       }},
            "text": {
-             "title": row.date_time,
-             "description": "{0}, T: {1} km/h, P: {2} km/h".format(row.name, row.speed, row.speed3d),
+             "title": str(row.date_time),
+             "description": u"{0}, {1} \u00B0C, T: {2} km/h, P: {3} km/h".format(name, row.temperature, row.speed, row.speed3d),
              "footnote": "http://www.uva-bits.nl",
            },
-           "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
+#            "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
            "biwStyle": "collapsed",
            "actions": [{
                         "label": "Share",
@@ -197,6 +163,10 @@ NULL
                         "activityType": 2
                       }]
          }
+        if 'alt' in p:
+            """Only show alt when gps fix"""
+            alt = row.altitude - float(p['alt'])
+            spot['transform'] = {'translate':{'z': alt}}
         spots.append(spot)
 
     return spots

@@ -15,8 +15,7 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
 
-sqlalchemy.url = sqlite:///%(here)s/eecology_layar.sqlite
-
+sqlalchemy.url = postgresql://*******:********@db.e-ecology.sara.nl/eecology?sslmode=require
 # By default, the toolbar only appears for clients from IP addresses
 # '127.0.0.1' and '::1'.
 # debugtoolbar.hosts = 127.0.0.1 ::1
@@ -26,7 +25,7 @@ sqlalchemy.url = sqlite:///%(here)s/eecology_layar.sqlite
 ###
 
 [server:main]
-use = egg:waitress#main
+use = egg:gunicorn#main
 host = 0.0.0.0
 port = 6543
 
