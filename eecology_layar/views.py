@@ -111,8 +111,23 @@ def get_hotspots(request):
   // Use PDO::execute() to execute the prepared statement $sql.
   $sql->execute();
     """
-    device_info_serial = 355
     p = request.params
+
+    if 'track' not in p:
+        p['track'] = 355
+
+    # predefined list of track+ranges
+    tracks = {
+              '355': [355, '2010-06-28T00:12:47Z', '2010-06-28T17:43:09Z'],
+              '6014a': [6014, '2013-06-07 02:16:33', '2013-06-07 14:58:04'],
+              '6014b': [6014, '2013-06-03 08:09:28', '2013-06-03 19:26:27'],
+              '870': [870, '2013-06-18 05:40:37', '2013-06-18 15:40:38'],
+              }
+
+    device_info_serial = tracks[p['track']][0]
+    start_time = tracks[p['track']][1]
+    stop_time = tracks[p['track']][2]
+
     point = "POINT({0} {1})".format(p['lon'], p['lat'])
     mine = WKTSpatialElement(point)
     spheroid = 'SPHEROID["WGS 84",6378137,298.257223563]'
@@ -123,9 +138,9 @@ def get_hotspots(request):
     query = query.join(Device).join(TrackSession).join(Individual)
     query = query.filter(within).params(mine=point, spheroid=spheroid, radius=p['radius'])
     query = query.filter(Track.device_info_serial==device_info_serial)
-    query = query.filter(Track.date_time.between('2010-06-28T00:12:47Z','2010-06-28T17:43:09Z'))
+    query = query.filter(Track.date_time.between(start_time, stop_time))
     query = query.order_by(distc)  # Closest spot first
-    
+
     logger.info(query)
 
     spots = []
@@ -161,7 +176,7 @@ def get_hotspots(request):
 #                                    "axis": {"z": 1},
 #                                    "angle": row.direction,
 #                                    },
-#                         "scale": 100, 
+#                         "scale": 100,
                          },
            "actions": [{
                         "label": "Share",
