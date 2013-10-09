@@ -113,8 +113,8 @@ def get_hotspots(request):
     """
     p = request.params
 
-    if 'track' not in p:
-        p['track'] = 355
+    if 'RADIOLIST' not in p:
+        p['RADIOLIST'] = 355
 
     # predefined list of track+ranges
     tracks = {
@@ -124,9 +124,9 @@ def get_hotspots(request):
               '870': [870, '2013-06-18 05:40:37', '2013-06-18 15:40:38'],
               }
 
-    device_info_serial = tracks[p['track']][0]
-    start_time = tracks[p['track']][1]
-    stop_time = tracks[p['track']][2]
+    device_info_serial = tracks[p['RADIOLIST']][0]
+    start_time = tracks[p['RADIOLIST']][1]
+    stop_time = tracks[p['RADIOLIST']][2]
 
     point = "POINT({0} {1})".format(p['lon'], p['lat'])
     mine = WKTSpatialElement(point)
