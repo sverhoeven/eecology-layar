@@ -158,7 +158,7 @@ def get_hotspots(request):
                                       }},
            "text": {
              "title": str(row.date_time),
-             "description": u"{0}, {1} \u00B0C, T: {2} km/h, P: {3} km/h".format(name, row.temperature, row.speed, row.speed3d),
+             "description": u"{0}, {1} \u00B0C, T: {2} km/h, P: {3} &deg;".format(name, row.temperature, round(row.speed, 4), row.direction),
              "footnote": "http://www.uva-bits.nl",
            },
 #            "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
