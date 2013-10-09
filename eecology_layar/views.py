@@ -150,6 +150,7 @@ def get_hotspots(request):
     rows = query.all();
     logger.info(len(rows))
     for row, indi in rows:
+
         name = "{0} {1} {2}".format(indi.sex, indi.species, indi.color_ring)
         spot = {
            "id": str(row.device_info_serial) + " " + str(row.date_time),
@@ -158,7 +159,7 @@ def get_hotspots(request):
                                       }},
            "text": {
              "title": str(row.date_time),
-             "description": u"{0}, {1} \u00B0C, T: {2} km/h, D: {3} &deg;".format(name, row.temperature, round(row.speed, 2), round(float(row.direction), 0)),
+             "description": u"{0}, {1} \u00B0C, T: {2} km/h, D: {3} &deg;".format(name, row.temperature, round(row.speed or 0, 2), round(row.direction or 0, 0) '),
              "footnote": "http://www.uva-bits.nl",
            },
 #            "imageURL": request.static_url('eecology_layar:static/class/{0}.jpg'.format(row.classifier)),
