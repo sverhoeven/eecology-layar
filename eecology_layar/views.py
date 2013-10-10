@@ -177,7 +177,7 @@ def get_hotspots(request):
 #                                    "axis": {"z": 1},
 #                                    "angle": row.direction,
 #                                    },
-#                         "scale": 100,
+                         "scale": p['CUSTOM_SLIDER']/100.0,
                          },
            "actions": [{
                         "label": "Share",
